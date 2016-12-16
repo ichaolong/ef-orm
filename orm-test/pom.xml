@@ -6,7 +6,7 @@
 	<parent>
 		<artifactId>ef-orm</artifactId>
 		<groupId>org.easyframe</groupId>
-		<version>1.10.0.FINAL</version>
+		<version>1.12.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>orm-test</artifactId>
 	<name>orm-test</name>
@@ -43,12 +43,6 @@
 			<groupId>commons-dbcp</groupId>
 			<artifactId>commons-dbcp</artifactId>
 			<version>1.4</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.25</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -112,18 +106,16 @@
 			<version>10.10.2.0</version>
 			<scope>provided</scope>
 		</dependency>
-
-		<dependency>
-			<groupId>com.oracle</groupId>
-			<artifactId>ojdbc6</artifactId>
-			<version>12.1.0.1.0</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/ojdbc6-12.1.0.1.0.jar</systemPath>
-		</dependency>
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.18</version>
+			<version>5.1.39</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.hynnet</groupId>
+			<artifactId>oracle-driver-ojdbc6</artifactId>
+			<version>12.1.0.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -148,7 +140,7 @@
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
-			<version>3.7.2</version>
+			<version>3.8.11.2</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

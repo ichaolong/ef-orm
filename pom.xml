@@ -4,7 +4,7 @@
 
 	<groupId>org.easyframe</groupId>
 	<artifactId>ef-orm</artifactId>
-	<version>1.10.0.FINAL</version>
+	<version>1.12.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>EasyFrame ORM</name>
@@ -14,11 +14,13 @@
 		<module>orm-test</module>
 		<module>jef-maven-plugin</module>
 		<module>orm-code-generator</module>
+    <module>spring-data-geequery</module>
   </modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<springframework.version>3.2.5.RELEASE</springframework.version>
+		<springframework.version>3.2.9.RELEASE</springframework.version>
 		<springframework.security.version>3.1.4.RELEASE</springframework.security.version>
+		<slf4j.version>1.7.21</slf4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -30,18 +32,19 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.12</version>
+			<version>${slf4j.version}</version>
+			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
-			<version>1.7.12</version>
+			<version>${slf4j.version}</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
-	    <!-- 关于资源文件的放置位置，修改maven习惯为eclipse习惯 -->
+		<!-- 关于资源文件的放置位置，修改maven习惯为eclipse习惯 -->
 		<resources>
 			<resource>
 				<directory>src/main/java</directory>
@@ -82,7 +85,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>findbugs-maven-plugin</artifactId>
@@ -100,6 +102,9 @@
 					<charset>UTF-8</charset>
 					<docencoding>UTF-8</docencoding>
 					<show>public</show>
+					<!--
+					<additionalparam>-Xdoclint:none</additionalparam>
+					-->
 				</configuration>
 				<executions>
 					<execution>

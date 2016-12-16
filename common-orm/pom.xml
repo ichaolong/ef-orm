@@ -6,12 +6,11 @@
 	<parent>
 		<groupId>org.easyframe</groupId>
 		<artifactId>ef-orm</artifactId>
-		<version>1.10.0.FINAL</version>
+		<version>1.12.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>common-orm</artifactId>
 	<name>common-orm</name>
 	<packaging>jar</packaging>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.easyframe</groupId>
@@ -19,9 +18,14 @@
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>com.github.javaparser</groupId>
+			<artifactId>javaparser-core</artifactId>
+			<version>2.3.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.geronimo.specs</groupId>
-			<artifactId>geronimo-jpa_2.0_spec</artifactId>
-			<version>1.1</version>
+			<artifactId>geronimo-jpa_2.1_spec</artifactId>
+			<version>1.0-alpha-1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -36,9 +40,9 @@
 
 		<!-- JDBC Drivers dependencies -->
 		<dependency>
-			<groupId>com.oracle</groupId>
-			<artifactId>ojdbc6</artifactId>
-			<version>12.1.0.1.0</version>
+			<groupId>com.hynnet</groupId>
+			<artifactId>oracle-driver-ojdbc6</artifactId>
+			<version>12.1.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -53,13 +57,8 @@
 			<version>9.2-1003-jdbc4</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>net.sf.mongojdbcdriver</groupId>
-			<artifactId>mongojdbcdriver</artifactId>
-			<version>0.0.2</version>
-			<scope>provided</scope>
-		</dependency>
-
+		<!-- <dependency> <groupId>net.sf.mongojdbcdriver</groupId> <artifactId>mongojdbcdriver</artifactId> 
+			<version>0.0.2</version> <scope>provided</scope> </dependency> -->
 		<!-- Spring dependencies -->
 		<dependency>
 			<groupId>org.springframework</groupId>
