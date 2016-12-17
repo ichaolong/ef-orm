@@ -15,6 +15,8 @@
 		<module>jef-maven-plugin</module>
 		<module>orm-code-generator</module>
     <module>spring-data-geequery</module>
+    <module>geequery-srping-boot-starter</module>
+    <module>geequery-spring-boot-auto-configure</module>
   </modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
