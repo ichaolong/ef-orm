@@ -25,7 +25,7 @@
 		<springframework.security.version>3.1.4.RELEASE</springframework.security.version>
 		<spring-data.version>1.13.6.RELEASE</spring-data.version>
 		<slf4j.version>1.7.21</slf4j.version>
-		<querydsl.version>3.7.4</querydsl.version>
+		<querydsl.version>4.1.4</querydsl.version>
 	</properties>
 	<dependencies>
 		<dependency>
