@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+﻿<?xml version="1.0"?>
 <project
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
 	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -6,12 +6,11 @@
 	<parent>
 		<groupId>org.easyframe</groupId>
 		<artifactId>ef-orm</artifactId>
-		<version>1.10.5.3</version>
+		<version>1.12.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>common-orm</artifactId>
 	<name>common-orm</name>
 	<packaging>jar</packaging>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.easyframe</groupId>
@@ -25,13 +24,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.geronimo.specs</groupId>
-			<artifactId>geronimo-jpa_2.0_spec</artifactId>
-			<version>1.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>17.0</version>
+			<artifactId>geronimo-jpa_2.1_spec</artifactId>
+			<version>1.0-alpha-1</version>
 		</dependency>
 		<!-- JTA dependencies -->
 		<!-- <dependency> <groupId>com.atomikos</groupId> <artifactId>transactions-jdbc</artifactId> 
@@ -41,9 +35,9 @@
 
 		<!-- JDBC Drivers dependencies -->
 		<dependency>
-			<groupId>com.oracle</groupId>
-			<artifactId>ojdbc6</artifactId>
-			<version>12.1.0.1.0</version>
+			<groupId>com.hynnet</groupId>
+			<artifactId>oracle-driver-ojdbc6</artifactId>
+			<version>12.1.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -58,13 +52,8 @@
 			<version>9.2-1003-jdbc4</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>net.sf.mongojdbcdriver</groupId>
-			<artifactId>mongojdbcdriver</artifactId>
-			<version>0.0.2</version>
-			<scope>provided</scope>
-		</dependency>
-
+		<!-- <dependency> <groupId>net.sf.mongojdbcdriver</groupId> <artifactId>mongojdbcdriver</artifactId> 
+			<version>0.0.2</version> <scope>provided</scope> </dependency> -->
 		<!-- Spring dependencies -->
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -117,38 +106,14 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.mchange</groupId>
-			<artifactId>c3p0</artifactId>
-			<version>0.9.2.1</version>
-			<scope>provided</scope>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-sql</artifactId>
+			<version>${querydsl.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>commons-dbcp</groupId>
-			<artifactId>commons-dbcp</artifactId>
-			<version>1.4</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.tomcat</groupId>
-			<artifactId>tomcat-jdbc</artifactId>
-			<version>7.0.47</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.jolbox</groupId>
-			<artifactId>bonecp</artifactId>
-			<version>0.7.1.RELEASE</version>
-			<scope>provided</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.guava</groupId>
-					<artifactId>guava</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-sql-codegen</artifactId>
+			<version>${querydsl.version}</version>
 		</dependency>
 	</dependencies>
 </project>
