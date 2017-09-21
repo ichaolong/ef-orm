@@ -1,8 +1,6 @@
 package com.github.geequery.codegen;
 
 import java.io.File;
-import java.sql.SQLException;
-import java.util.Arrays;
 
 import jef.codegen.EntityEnhancer;
 import jef.database.DataObject;
@@ -10,13 +8,12 @@ import jef.database.DbClient;
 import jef.database.ORMConfig;
 import jef.database.datasource.SimpleDataSource;
 import jef.database.jpa.JefEntityManagerFactory;
+import jef.database.support.InitDataExporter;
 import jef.database.support.QuerableEntityScanner;
-import jef.tools.string.RandomData;
 
 import org.junit.Test;
 
 import com.github.geequery.codegen.MetaProvider.DbClientProvider;
-import com.github.geequery.codegen.testid.Foo;
 
 public class ExportTest {
     @Test
@@ -39,8 +36,8 @@ public class ExportTest {
     @Test
     public void testExporterData() throws Exception {
         DbClient db = new DbClient(new SimpleDataSource("jdbc:mysql://api.hikvision.com.cn:3306/api", "root", "88075998"));
-        DbExporter ex = new DbExporter();
-        ex.exportPackage(db, "com.github.geequery.codegen.entity", new File(System.getProperty("user.dir"), "src/test/resources"));
+        InitDataExporter ex = new InitDataExporter(db, new File(System.getProperty("user.dir"), "src/test/resources"));
+        ex.exportPackage("com.github.geequery.codegen.entity");
         db.shutdown();
     }
 
@@ -56,7 +53,7 @@ public class ExportTest {
         qe.setAllowDropColumn(true);
         qe.setAlterTable(true);
         qe.setCreateTable(true);
-        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false);
+        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8");
         qe.setPackageNames("com.github.geequery.codegen.entity");
         qe.doScan();
         qe.finish();
@@ -64,14 +61,32 @@ public class ExportTest {
     }
 
     @Test
-    public void testGeneratedSeq() throws Exception {
+    public void testGenerated1Seq() throws Exception {
+        ORMConfig.getInstance().setDebugMode(true);
         EntityEnhancer en = new EntityEnhancer();
         en.enhance("com.github.geequery.codegen.testid");
         DbClient db = new DbClient(new SimpleDataSource("jdbc:mysql://api.hikvision.com.cn:3306/test1", "root", "88075998"));
-        DbExporter ex = new DbExporter();
-        ex.exportPackage(db, "com.github.geequery.codegen.testid", new File(System.getProperty("user.dir"), "src/test/resources"));
-//        db.createTable(Foo.class);
-        
+    }
+
+    @Test
+    public void testGeneratedSeq() throws Exception {
+        ORMConfig.getInstance().setDebugMode(true);
+        ORMConfig.getInstance().setManualSequence(true);
+        EntityEnhancer en = new EntityEnhancer();
+        en.enhance("com.github.geequery.codegen.testid");
+        DbClient db = new DbClient(new SimpleDataSource("jdbc:mysql://api.hikvision.com.cn:3306/test1", "root", "88075998"));
+        QuerableEntityScanner qe = new QuerableEntityScanner();
+        qe.setImplClasses(DataObject.class);
+        qe.setAllowDropColumn(true);
+        qe.setAlterTable(true);
+        qe.setCreateTable(true);
+        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8");
+        qe.setPackageNames("com.github.geequery.codegen.testid");
+        qe.doScan();
+        qe.finish();
+        db.shutdown();
+        // db.createTable(Foo.class);
+
     }
 
 }
