@@ -14,6 +14,7 @@ import jef.database.support.QuerableEntityScanner;
 import org.junit.Test;
 
 import com.github.geequery.codegen.MetaProvider.DbClientProvider;
+import com.github.geequery.codegen.testid.Foo;
 
 public class ExportTest {
     @Test
@@ -70,10 +71,20 @@ public class ExportTest {
 
     @Test
     public void testGeneratedSeq() throws Exception {
-        ORMConfig.getInstance().setDebugMode(true);
+        ORMConfig.getInstance();
+        
+        
+        Foo foo = new Foo();
+        foo.setName("aaa");
+        if (!foo.needUpdate()) {
+            System.out.println(foo.getUpdateValueMap().size());
+           throw new IllegalArgumentException("动态增强没生效");
+        }
+
+        
         ORMConfig.getInstance().setManualSequence(true);
-        EntityEnhancer en = new EntityEnhancer();
-        en.enhance("com.github.geequery.codegen.testid");
+        // EntityEnhancer en = new EntityEnhancer();
+        // en.enhance("com.github.geequery.codegen.testid");
         DbClient db = new DbClient(new SimpleDataSource("jdbc:mysql://api.hikvision.com.cn:3306/test1", "root", "88075998"));
         QuerableEntityScanner qe = new QuerableEntityScanner();
         qe.setImplClasses(DataObject.class);

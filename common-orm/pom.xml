@@ -115,5 +115,10 @@
 			<artifactId>querydsl-sql-codegen</artifactId>
 			<version>${querydsl.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-instrument</artifactId>
+			<version>4.3.11.RELEASE</version>
+		</dependency>
 	</dependencies>
 </project>
