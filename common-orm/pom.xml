@@ -119,6 +119,7 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-instrument</artifactId>
 			<version>4.3.11.RELEASE</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 </project>
