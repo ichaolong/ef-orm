@@ -72,16 +72,14 @@ public class ExportTest {
     @Test
     public void testGeneratedSeq() throws Exception {
         ORMConfig.getInstance();
-        
-        
+
         Foo foo = new Foo();
         foo.setName("aaa");
         if (!foo.needUpdate()) {
             System.out.println(foo.getUpdateValueMap().size());
-           throw new IllegalArgumentException("动态增强没生效");
+            throw new IllegalArgumentException("动态增强没生效");
         }
 
-        
         ORMConfig.getInstance().setManualSequence(true);
         // EntityEnhancer en = new EntityEnhancer();
         // en.enhance("com.github.geequery.codegen.testid");
