@@ -125,12 +125,20 @@
 			<version>42.1.4.jre7</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- 
 		<dependency>
 			<groupId>com.microsoft.sqlserver</groupId>
 			<artifactId>sqljdbc4</artifactId>
 			<version>4.0.1</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/lib/sqljdbc4.jar</systemPath>
+		</dependency>
+		 -->
+		 <!-- 微软的SQLServer 驱动for java8 -->
+		<dependency>
+			<groupId>com.microsoft.sqlserver</groupId>
+			<artifactId>mssql-jdbc</artifactId>
+			<version>6.2.1.jre8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hsqldb</groupId>
