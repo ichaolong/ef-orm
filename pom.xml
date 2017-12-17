@@ -16,14 +16,12 @@
 		<module>jef-maven-plugin</module>
 		<module>orm-code-generator</module>
 		<module>spring-data-geequery</module>
-		<module>geequery-srping-boot-starter</module>
-		<module>geequery-spring-boot-auto-configure</module>
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<springframework.version>4.3.7.RELEASE</springframework.version>
 		<springframework.security.version>3.1.4.RELEASE</springframework.security.version>
-		<spring-data.version>1.13.6.RELEASE</spring-data.version>
+		<spring-data.version>2.0.2.RELEASE</spring-data.version>
 		<slf4j.version>1.7.21</slf4j.version>
 		<querydsl.version>4.1.4</querydsl.version>
 	</properties>
