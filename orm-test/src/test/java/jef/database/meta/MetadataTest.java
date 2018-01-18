@@ -9,6 +9,10 @@ import jef.database.DbClient;
 import jef.database.DbMetaData;
 import jef.database.DbMetaData.ObjectType;
 import jef.database.Session;
+import jef.database.meta.object.Column;
+import jef.database.meta.object.ForeignKey;
+import jef.database.meta.object.Index;
+import jef.database.meta.object.TableInfo;
 import jef.database.test.DataSource;
 import jef.database.test.DataSourceContext;
 import jef.database.test.IgnoreOn;
@@ -25,9 +29,9 @@ import org.junit.runner.RunWith;
 	 @DataSource(name="oracle",url="${oracle.url}",user="${oracle.user}",password="${oracle.password}"),
 	 @DataSource(name = "mysql", url = "${mysql.url}", user = "${mysql.user}", password = "${mysql.password}"),
 	 @DataSource(name="postgresql",url="${postgresql.url}",user="${postgresql.user}",password="${postgresql.password}"),
-	 @DataSource(name="derby",url="jdbc:derby:./db;create=true"),
-	 @DataSource(name = "hsqldb", url = "jdbc:hsqldb:mem:testhsqldb", user = "sa", password = ""),
-	 @DataSource(name = "sqlite", url = "jdbc:sqlite:test.db?date_string_format=yyyy-MM-dd HH:mm:ss"),
+	 @DataSource(name="derby",url="${derby.url}"),
+	 @DataSource(name = "hsqldb", url = "${hsqldb.url}", user = "sa", password = ""),
+	 @DataSource(name = "sqlite", url = "${sqlite.url}"),
 	 @DataSource(name = "sqlserver", url = "${sqlserver.url}",user="${sqlserver.user}",password="${sqlserver.password}")
 })
 public class MetadataTest extends org.junit.Assert{

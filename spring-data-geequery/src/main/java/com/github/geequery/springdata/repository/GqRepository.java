@@ -24,7 +24,11 @@ import javax.persistence.NonUniqueResultException;
 
 import jef.database.NamedQueryConfig;
 import jef.database.NativeQuery;
+import jef.database.query.ConditionQuery;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.QueryByExampleExecutor;
@@ -80,7 +84,7 @@ public interface GqRepository<T, ID extends Serializable> extends PagingAndSorti
     /**
      * 查询列表
      * 
-     * @param data
+     * @param query
      *            查询请求。
      *            <ul>
      *            <li>如果设置了Query条件，按query条件查询。 否则——</li>
@@ -89,7 +93,23 @@ public interface GqRepository<T, ID extends Serializable> extends PagingAndSorti
      *            </ul>
      * @return 结果
      */
-    List<T> find(T data);
+    List<T> find(T query);
+    
+    /**
+     * 根据查询请求查询
+     * @param query 请求
+     * @param sort 排序
+     * @return 结果
+     */
+    List<T> find(T query, Sort sort);
+    
+    /**
+     * 根据查询请求查询
+     * @param query 请求
+     * @param pageable 分页
+     * @return 结果
+     */
+    Page<T> find(T query, Pageable pageable);
 
     /**
      * 查询一条记录，如果结果不唯一则抛出异常
@@ -273,4 +293,47 @@ public interface GqRepository<T, ID extends Serializable> extends PagingAndSorti
      * @see SQLQuery
      */
     SQLQuery sql();
+    
+
+	/**
+	 * Returns a single entity matching the given {@link ConditionQuery}.
+	 * 
+	 * @param spec
+	 * @return
+	 */
+	T load(ConditionQuery spec);
+
+	/**
+	 * Returns all entities matching the given {@link ConditionQuery}.
+	 * 
+	 * @param spec
+	 * @return
+	 */
+	List<T> find(ConditionQuery spec);
+
+	/**
+	 * Returns a {@link Page} of entities matching the given {@link ConditionQuery}.
+	 * 
+	 * @param spec
+	 * @param pageable
+	 * @return
+	 */
+	Page<T> find(ConditionQuery spec, Pageable pageable);
+
+	/**
+	 * Returns all entities matching the given {@link ConditionQuery} and {@link Sort}.
+	 * 
+	 * @param spec
+	 * @param sort
+	 * @return
+	 */
+	List<T> find(ConditionQuery spec, Sort sort);
+
+	/**
+	 * Returns the number of instances that the given {@link ConditionQuery} will return.
+	 * 
+	 * @param spec the {@link Specification} to count instances for
+	 * @return the number of instances
+	 */
+	long count(ConditionQuery spec);
 }

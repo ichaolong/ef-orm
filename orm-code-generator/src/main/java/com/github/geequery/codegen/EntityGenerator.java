@@ -39,8 +39,8 @@ import jef.database.dialect.ColumnType.AutoIncrement;
 import jef.database.dialect.ColumnType.GUID;
 import jef.database.dialect.ColumnType.Varchar;
 import jef.database.dialect.DatabaseDialect;
-import jef.database.meta.Column;
-import jef.database.meta.TableInfo;
+import jef.database.meta.object.Column;
+import jef.database.meta.object.TableInfo;
 import jef.database.routing.function.KeyFunction;
 import jef.http.client.support.CommentEntry;
 import jef.tools.ArrayUtils;
@@ -88,7 +88,7 @@ public class EntityGenerator {
     public JavaUnit generateSource(String tablename, String entityName, String tableComment) throws SQLException {
         if (profile == null) {
             LogUtil.warn("Db dialect not set,default dialect set to Oracle.");
-            profile = AbstractDialect.getProfile("oracle");
+            profile = AbstractDialect.getDialect("oracle");
         }
         tablename = profile.getObjectNameToUse(tablename);
         // System.out.println("   Generating Class for table:"+tablename+"....");

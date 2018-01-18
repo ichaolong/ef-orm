@@ -12,7 +12,7 @@ import jef.database.IQueryableEntity;
 import jef.database.jdbc.result.ResultSets;
 import jef.database.meta.ITableMetadata;
 import jef.database.meta.MetaHolder;
-import jef.database.meta.TableInfo;
+import jef.database.meta.object.TableInfo;
 import jef.database.test.DataSource;
 import jef.database.test.DataSourceContext;
 import jef.database.test.DatabaseInit;
@@ -36,7 +36,7 @@ import org.junit.runner.RunWith;
 @DataSourceContext({
 // @DataSource(name="oracle",url="${oracle.url}",user="${oracle.user}",password="${oracle.password}"),
 // @DataSource(name = "postgresql", url = "${postgresql.url}", user = "${postgresql.user}", password = "${postgresql.password}"), 
- @DataSource(name = "hsqldb", url = "jdbc:hsqldb:mem:testhsqldb", user = "sa", password = "")
+ @DataSource(name = "hsqldb", url = "${hsqldb.url}", user = "sa", password = "")
 })
 public class SequenceCreationTest extends org.junit.Assert{
 	

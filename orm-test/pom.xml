@@ -6,7 +6,7 @@
 	<parent>
 		<artifactId>ef-orm</artifactId>
 		<groupId>org.easyframe</groupId>
-		<version>1.12.0-SNAPSHOT</version>
+		<version>1.12.0.RC1</version>
 	</parent>
 	<artifactId>orm-test</artifactId>
 	<name>orm-test</name>
@@ -16,6 +16,11 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+		</dependency>
 		<dependency>
 			<groupId>org.easyframe</groupId>
 			<artifactId>common-orm</artifactId>
@@ -28,9 +33,14 @@
 			</exclusions>
 		</dependency>
 		<dependency>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+			<version>2.7.4</version>
+		</dependency>
+		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
-			<version>1.0.9</version>
+			<version>1.1.6</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -95,15 +105,9 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
-			<version>10.13.1.1</version>
+			<version>10.14.1.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -112,24 +116,34 @@
 			<version>5.1.42</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- Test dependencies -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.196</version>
+		</dependency>
 		<dependency>
 			<groupId>com.hynnet</groupId>
 			<artifactId>oracle-driver-ojdbc6</artifactId>
 			<version>12.1.0.1</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- <dependency> <groupId>org.postgresql</groupId> <artifactId>postgresql</artifactId> 
+			<version>9.4-1200-jdbc4</version> <scope>test</scope> </dependency> -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>9.4-1200-jdbc4</version>
+			<version>42.1.4.jre7</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- <dependency> <groupId>com.microsoft.sqlserver</groupId> <artifactId>sqljdbc4</artifactId> 
+			<version>4.0.1</version> <scope>system</scope> <systemPath>${project.basedir}/lib/sqljdbc4.jar</systemPath> 
+			</dependency> -->
+		<!-- 微软的SQLServer 驱动for java8 -->
 		<dependency>
 			<groupId>com.microsoft.sqlserver</groupId>
-			<artifactId>sqljdbc4</artifactId>
-			<version>4.0.1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/sqljdbc4.jar</systemPath>
+			<artifactId>mssql-jdbc</artifactId>
+			<version>6.2.1.jre8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hsqldb</groupId>

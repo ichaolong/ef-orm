@@ -6,8 +6,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import jef.common.log.LogUtil;
-import jef.common.wrapper.IntRange;
 import jef.database.Condition;
 import jef.database.Condition.Operator;
 import jef.database.IConditionField.And;
@@ -33,12 +35,10 @@ import jef.orm.multitable.model.Person;
 import jef.orm.multitable.model.School;
 import jef.orm.multitable.model.Score;
 import jef.script.javascript.Var;
+import jef.tools.PageLimit;
 import jef.tools.StringUtils;
 import jef.tools.collection.CollectionUtils;
 import jef.tools.string.RandomData;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * 级联操作相关测试
@@ -47,11 +47,11 @@ import org.junit.runner.RunWith;
  * 
  */
 @RunWith(JefJUnit4DatabaseTestRunner.class)
-@DataSourceContext({ @DataSource(name = "hsqldb", url = "jdbc:hsqldb:mem:testhsqldb", user = "sa", password = ""),
+@DataSourceContext({ @DataSource(name = "hsqldb", url = "${hsqldb.url}", user = "sa", password = ""),
         @DataSource(name = "oracle", url = "${oracle.url}", user = "${oracle.user}", password = "${oracle.password}"),
         @DataSource(name = "mysql", url = "${mysql.url}", user = "${mysql.user}", password = "${mysql.password}"),
         @DataSource(name = "postgresql", url = "${postgresql.url}", user = "${postgresql.user}", password = "${postgresql.password}"),
-        @DataSource(name = "derby", url = "jdbc:derby:./db;create=true"),
+        @DataSource(name = "derby", url = "${derby.url}"),
         @DataSource(name = "sqlite", url = "jdbc:sqlite:test.db?date_class=integer&date_string_format=yyyy-MM-dd HH:mm:ss"),
         @DataSource(name = "sqlserver", url = "${sqlserver.url}", user = "${sqlserver.user}", password = "${sqlserver.password}") })
 public class CascadeTableTest extends MultiTableTestBase {
@@ -482,7 +482,7 @@ public class CascadeTableTest extends MultiTableTestBase {
     public void testSelect() throws SQLException {
         System.out.println("=========== testSelect Begin ==========");
         Query<Person> p = QB.create(Person.class);
-        List<Person> ps = db.select(p, new IntRange(1, 2));
+        List<Person> ps = db.select(p, new PageLimit(0, 2));
         assertTrue(ps.size() > 0);
         System.out.println("=========== testSelect End ==========");
     }

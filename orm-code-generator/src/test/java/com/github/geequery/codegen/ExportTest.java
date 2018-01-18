@@ -22,7 +22,7 @@ public class ExportTest {
         final DbClient db = new DbClient(new SimpleDataSource("jdbc:mysql://api.hikvision.com.cn:3306/api?useUnicode=true&characterEncoding=UTF-8", "root",
                 "88075998"));
         EntityGenerator g = new EntityGenerator();
-        g.setProfile(db.getProfile());
+        g.setProfile(db.getProfile(null));
         g.addExcludePatter(".*_\\d+$"); // 防止出现分表
         g.addExcludePatter("AAA"); // 排除表
         g.setMaxTables(999);
@@ -32,6 +32,7 @@ public class ExportTest {
         });
         g.generateSchema();
         db.shutdown();
+        
     }
 
     @Test
