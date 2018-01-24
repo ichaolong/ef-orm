@@ -55,7 +55,7 @@ public class ExportTest {
         qe.setAllowDropColumn(true);
         qe.setAlterTable(true);
         qe.setCreateTable(true);
-        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8");
+        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8","txt");
         qe.setPackageNames("com.github.geequery.codegen.entity");
         qe.doScan();
         qe.finish();
@@ -90,7 +90,7 @@ public class ExportTest {
         qe.setAllowDropColumn(true);
         qe.setAlterTable(true);
         qe.setCreateTable(true);
-        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8");
+        qe.setEntityManagerFactory(new JefEntityManagerFactory(db), false, "UTF-8","txt");
         qe.setPackageNames("com.github.geequery.codegen.testid");
         qe.doScan();
         qe.finish();

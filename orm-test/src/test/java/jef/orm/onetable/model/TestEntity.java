@@ -1,5 +1,6 @@
 package jef.orm.onetable.model;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,8 +18,6 @@ import javax.persistence.Lob;
 import javax.persistence.Table;
 
 import jef.database.annotation.EasyEntity;
-
-import com.alibaba.fastjson.annotation.JSONType;
 
 @EasyEntity
 @Table(name = "test_entity")
@@ -56,6 +55,8 @@ public class TestEntity extends jef.database.DataObject {
     private LocalDateTime joda3a;
     private Instant joda4a;
     private YearMonth joda5a;
+    private BigDecimal superBig;
+    
 
     @Lob
     private byte[] binaryData;
@@ -299,11 +300,19 @@ public class TestEntity extends jef.database.DataObject {
 		this.joda5a = joda5a;
 	}
 
+	public BigDecimal getSuperBig() {
+		return superBig;
+	}
+
+	public void setSuperBig(BigDecimal superBig) {
+		this.superBig = superBig;
+	}
+
 
 
 	public enum Field implements jef.database.Field {
 
         field1, field2, dateField, binaryData, boolField, boolField2, intFiled, intField2, longField, longField2, doubleField, doubleField2, floatField, folatField2, createTime, joda1, joda2, joda3, joda4, joda5,
-        joda3a,joda4a,joda5a
+        joda3a,joda4a,joda5a,superBig
     }
 }

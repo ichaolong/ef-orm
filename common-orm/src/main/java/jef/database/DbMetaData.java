@@ -38,6 +38,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.persistence.PersistenceException;
 import javax.sql.DataSource;
@@ -69,10 +70,12 @@ import jef.database.meta.Feature;
 import jef.database.meta.ITableMetadata;
 import jef.database.meta.MetaHolder;
 import jef.database.meta.MetadataFeature;
-import jef.database.meta.TableCreateStatement;
+import jef.database.meta.TableCreateSQLs;
 import jef.database.meta.def.IndexDef;
 import jef.database.meta.def.UniqueConstraintDef;
 import jef.database.meta.object.Column;
+import jef.database.meta.object.Constraint;
+import jef.database.meta.object.ConstraintType;
 import jef.database.meta.object.DataType;
 import jef.database.meta.object.ForeignKey;
 import jef.database.meta.object.Function;
@@ -141,6 +144,7 @@ import org.easyframe.enterprise.spring.TransactionMode;
  * 
  */
 public class DbMetaData {
+
 	public final Set<String> checkedFunctions = new HashSet<String>();
 
 	private String dbkey;
@@ -792,10 +796,17 @@ public class DbMetaData {
 		return result;
 	}
 
+	/**
+	 * 判断一条索引是否和数据库定义中的索引一致。
+	 * 
+	 * @param index
+	 * @param meta
+	 * @return
+	 */
 	private boolean isUniqueFromClassAnnotation(Index index, ITableMetadata meta) {
 		DatabaseDialect dialect = this.getProfile();
-		for (UniqueConstraintDef unique : meta.getUniques()) {
-			List<String> columns = unique.toColumnNames(meta, dialect);
+		for (UniqueConstraintDef unique : meta.getUniqueDefinitions()) {
+			List<String> columns = unique.getColumnNames(meta, dialect);
 			if (ArrayUtils.equals(columns.toArray(new String[columns.size()]), index.getColumnNames())) {
 				return true;
 			}
@@ -1547,9 +1558,26 @@ public class DbMetaData {
 	 *             修改表失败时抛出
 	 * @see MetadataEventListener 变更监听器
 	 */
-	public void refreshTable(ITableMetadata meta, String tablename, MetadataEventListener event) throws SQLException {
-		DatabaseDialect profile = getProfile();
-		tablename = profile.getObjectNameToUse(tablename);
+	public void refreshTable(ITableMetadata meta, String tablename, MetadataEventListener event, boolean modifyConstraint, boolean modifyIndex)
+			throws SQLException {
+		tablename = info.profile.getObjectNameToUse(tablename);
+		// 列的修改
+		modifyColumns(tablename, meta, event);
+		// 约束的修改
+		if (modifyConstraint) {
+			executeDDL(calculateConstraints(meta, tablename), tablename, meta, event);
+		}
+		// 索引的修改
+		if (modifyIndex) {
+			executeDDL(calculateIndexes(meta, tablename), tablename, meta, event);
+		}
+		if (event != null) {
+			event.onTableFinished(meta, tablename);
+		}
+	}
+
+	private void modifyColumns(String tablename, ITableMetadata meta, MetadataEventListener event) throws SQLException {
+		DatabaseDialect profile = info.profile;
 		boolean supportsChangeDelete = profile.notHas(Feature.NOT_SUPPORT_ALTER_DROP_COLUMN);
 		if (!supportsChangeDelete) {
 			LogUtil.warn("Current database [{}] doesn't support alter table column.", profile.getName());
@@ -1611,30 +1639,32 @@ public class DbMetaData {
 		if (event != null && event.onColumnsCompared(tablename, meta, insert, changed, delete) == false) {
 			return;
 		}
-		List<String> altertables = ddlGenerator.toTableModifyClause(meta, tablename, insert, changed, delete);
-		altertables.addAll(compareIndexAndConstraints(meta, tablename));
+		executeDDL(ddlGenerator.toTableModifyClause(meta, tablename, insert, changed, delete), tablename, meta, event);
+	}
+
+	private void executeDDL(List<String> alterTableSQLs, String tablename, ITableMetadata meta, MetadataEventListener event) throws SQLException {
 		StatementExecutor exe = createExecutor();
 		try {
 			exe.setQueryTimeout(180);// 最多执行3分钟
 			if (event != null) {
-				event.beforeAlterTable(tablename, meta, exe, altertables);
+				event.beforeAlterTable(tablename, meta, exe, alterTableSQLs);
 			}
 			int n = 0;
-			for (String s : altertables) {
+			for (String sql : alterTableSQLs) {
 				long start = System.currentTimeMillis();
 				boolean success = true;
 				try {
-					exe.executeSql(s);
+					exe.executeSql(sql);
 				} catch (SQLException e) {
 					success = false;
-					if (event == null || !event.onSqlExecuteError(e, tablename, s, Collections.unmodifiableList(altertables), n)) {
+					if (event == null || !event.onSqlExecuteError(e, tablename, sql, Collections.unmodifiableList(alterTableSQLs), n)) {
 						throw e;
 					}
 				}
 				if (success) {
 					long cost = System.currentTimeMillis() - start;
 					if (event != null) {
-						event.onAlterSqlFinished(tablename, s, Collections.unmodifiableList(altertables), n, cost);
+						event.onAlterSqlFinished(tablename, sql, Collections.unmodifiableList(alterTableSQLs), n, cost);
 					}
 				}
 				n++;
@@ -1642,53 +1672,179 @@ public class DbMetaData {
 		} finally {
 			exe.close();
 		}
-		if (event != null) {
-			event.onTableFinished(meta, tablename);
-		}
 	}
 
-	private Collection<? extends String> compareIndexAndConstraints(ITableMetadata meta, String tablename) throws SQLException {
-		// 计算主键变化
-
+	private List<String> calculateConstraints(ITableMetadata meta, String tablename) throws SQLException {
 		List<String> sqls = new ArrayList<String>();
 
+		// 计算主键变化
+		List<ColumnMapping> pkFields = meta.getPKFields();
+		PrimaryKey pk = getPrimaryKey(tablename);
+
+		String[] pkColumnsEntity = new String[pkFields.size()]; // entity中定义的主键
+		for (int n = 0; n < pkFields.size(); n++) {
+			pkColumnsEntity[n] = pkFields.get(n).getColumnName(info.profile, false);
+		}
+
+		String[] pkColumnsDB = new String[0]; // DB中实际的主键
+		if (pk != null) {
+			pkColumnsDB = pk.getColumns();
+		}
+
+		if (!ArrayUtils.equals(pkColumnsEntity, pkColumnsDB)) {
+			// FIXME 暂不支持修改主键
+			if (pk != null) {
+				LogUtil.warn("Primary key of table [{}] was changed from [{}] to [{}], automatically modifying is not supported yet. Please modify your table by yourself.");
+				/*
+				 * Constraint con = new Constraint(); con.setName(pk.getName());
+				 * con.setTableName(tablename); con.setType(ConstraintType.P);
+				 * con.setColumns(Arrays.asList(pkColumnsDB));
+				 * sqls.add(ddlGenerator.deleteConstraint(con));
+				 */// 先删除原主键约束
+			} else {
+				// 没有的加上主键
+				Constraint con = new Constraint();
+				con.setTableName(tablename);
+				con.setName(info.profile.getObjectNameToUse("PK_" + tablename));
+				con.setType(ConstraintType.P);
+				con.setColumns(Arrays.asList(pkColumnsEntity));
+				sqls.add(ddlGenerator.addConstraint(con)); // 添加新主键约束
+			}
+		}
+
 		// 计算唯一性约束变化
-		// 计算外键变化
+		List<Constraint> constraintsDB = info.profile.getConstraintInfo(this, meta.getSchema(), tablename, null); // DB中定义的约束
+		if (constraintsDB != null) { // 返回null则表示当前数据库不支持获取约束
+			constraintsDB = constraintsDB.stream().filter((e) -> e.getType() == ConstraintType.U).collect(Collectors.toList());
+			List<Constraint> uniquesEntity = meta.getUniqueDefinitions().stream().map((e) -> e.toConstraint(tablename, meta, info.profile))
+					.collect(Collectors.toList());
+			sqls.addAll(this.compareConstraints(uniquesEntity, constraintsDB)); // 比较两个约束列表，返回SQL语句
+		}
+		return sqls;
+	}
 
-		// 先计算键和约束，再计算索引，因为键会影响索引，造成索引的判断困难。
-		// 计算要删除的约束
+	private List<String> calculateIndexes(ITableMetadata meta, String tablename) throws SQLException {
+		List<String> sqls = new ArrayList<String>();
 
-		// 首先看四种约束中的主键还需不需要管理。
-
-		// 计算要添加的约束
+		// 该张表上全部的约束
+		List<Constraint> constraints = info.profile.getConstraintInfo(this, schema, tablename, null);
+		PrimaryKey pk = this.getPrimaryKey(tablename);
+		List<ForeignKey> referedKeys=getForeignKeyReferenceTo(tablename);
 
 		// 计算要删除的索引
-		Collection<Index> indexes = getIndexes(tablename);
+		Collection<Index> indexesDB = getIndexes(tablename);
 		List<IndexDef> newIndexes = meta.getIndexDefinition();
-		for (Index index : indexes) {
-			if (isDupIndex(index, newIndexes)) {
+		for (Index index : indexesDB) {
+			if (isDupIndex(index, newIndexes, meta)) {
 				continue;
 			}
 			// 还要确认当前索引不是某个约束或键的索引
-			if (isNotAConstraintIndex(index, meta)) {
+			if (!isConstraintIndex(index, constraints, pk, referedKeys)) {
 				sqls.add(ddlGenerator.deleteIndex(index));
 			}
 
 		}
-		// 计算要添加的索引
+		// 由于在isDupIndex方法中删除了数据库中已匹配上的Index，列表中剩下的全部都是要新建的Index
 		for (IndexDef def : newIndexes) {
 			sqls.add(ddlGenerator.addIndex(def, meta, tablename));
 		}
-
 		return sqls;
 	}
 
-	private boolean isNotAConstraintIndex(Index index, ITableMetadata meta) {
-		// TODO Auto-generated method stub
+	// 计算前后约束的增删改，返回增删SQL语句
+	private List<String> compareConstraints(List<Constraint> after, List<Constraint> before) {
+		List<String> result = new ArrayList<String>();
+		if (after != null && after.size() > 0) {
+
+			if (before != null && before.size() > 0) {
+
+				for (int i = after.size() - 1; i >= 0; i--) {
+					Constraint conA = after.get(i);
+
+					for (int j = 0; j < before.size(); j++) {
+						Constraint conB = before.get(j);
+						if (conA.getName().equals(conB.getName())) { // 同一个约束，判断是否有变更
+							if (conA.equals(conB)) { // 如果相同则两边都移除
+								after.remove(i);
+								before.remove(j);
+							}
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		// 先生成需要删除的约束的语句
+		for (Constraint con : before) {
+			result.add(ddlGenerator.deleteConstraint(con));
+		}
+
+		// 再生成需要增加的约束的语句
+		for (Constraint con : after) {
+			result.add(ddlGenerator.addConstraint(con));
+		}
+
+		return result;
+	}
+
+	private boolean isConstraintIndex(Index index, List<Constraint> constraints, PrimaryKey pk, List<ForeignKey> foreignKeys) throws SQLException {
+		// 主键一致，不删除
+		// if(index.getIndexName().equals(pk.getName()))return true;
+		if (ArrayUtils.equals(index.getColumnNames(), pk.getColumns())) {
+			return true;
+		}
+		// 数据库不支持取约束，保守策略：返回true不删除任何索引。
+		if (constraints == null) {
+			return true;
+		}
+		// Unique约束一致，不删除
+		for (Constraint c : constraints) {
+			if (c.getType() == ConstraintType.U || c.getType() == ConstraintType.P) {
+				if (index.getIndexName().equalsIgnoreCase(c.getName())) {
+					// TODO 这个判断究竟有没有意义，由约束而产生的索引和约束的名称是否会一样？要测试。
+					return true;
+				}
+				// FIXME 列相同就不删除？这样的话如果Unique约束的相同字段上再手工创建一条索引，这条索引将不会被删除。
+				// 这个规则可能也是有问题的。
+				if (ArrayUtils.equals(index.getColumnNames(), c.getColumns())) {
+					return true;
+				}
+			}
+		}
+		//被引用的外键约束一致，不删除
+		//外键上的索引也不能删除，否则数据库效率极低，Oracle还会锁表。
+		//虽然我们不建议在数据库中创建外键，但如果真有人这么做了，也不能坑。
+		for(ForeignKey foreignKey:foreignKeys){
+			
+			
+		}
 		return false;
 	}
 
-	private boolean isDupIndex(Index index, List<IndexDef> meta) {
+	/**
+	 * 是否一条已经定义的Index，注意如果是一条已定义的Index，会从idxDefList中删除对应的Index
+	 * 
+	 * @param index
+	 * @param idxDefList
+	 * @param meta
+	 * @return
+	 * @throws SQLException
+	 */
+	private boolean isDupIndex(Index index, List<IndexDef> idxDefList, ITableMetadata meta) throws SQLException {
+		for (IndexDef idxDef : idxDefList) {
+			String[] indexColumns = new String[index.getColumns().size()];
+			for (int i = 0; i < indexColumns.length; i++) {
+				IndexItem idxItem = index.getColumns().get(i);
+				indexColumns[i] = idxItem.toString();
+			}
+			String[] indexColumnsDef = toIndexDescrption(meta, idxDef.getColumns()).getColumnNames();
+			if ((index.isUnique() == idxDef.isUnique()) && (StringUtils.contains(index.getUserDefinition(), "clustered", true) == idxDef.isClustered())
+					&& (ArrayUtils.equals(indexColumns, indexColumnsDef))) {
+				idxDefList.remove(idxDef);
+				return true;
+			}
+		}
 		return false;
 	}
 
@@ -1761,7 +1917,7 @@ public class DbMetaData {
 		}
 		boolean created = false;
 		if (!existTable(tablename)) {
-			TableCreateStatement sqls = ddlGenerator.toTableCreateClause(meta, tablename);
+			TableCreateSQLs sqls = ddlGenerator.toTableCreateClause(meta, tablename);
 			StatementExecutor exe = createExecutor();
 			try {
 				// 建表
@@ -1772,7 +1928,8 @@ public class DbMetaData {
 				}
 				exe.executeSql(sqls.getComments());
 				// 创建外键约束等
-				exe.executeSql(sqls.getOtherContraints());
+				// TODO
+				// exe.executeSql(sqls.getOtherContraints());
 				// create indexes
 				exe.executeSql(getIndexClausesOfTable(meta, tablename));
 			} finally {
@@ -1843,6 +2000,17 @@ public class DbMetaData {
 		}
 	}
 
+	/**
+	 * 创建Sequence
+	 * 
+	 * @param schema
+	 * @param sequenceName
+	 * @param start
+	 * @param max
+	 * @param executor
+	 * @param check
+	 * @throws SQLException
+	 */
 	private void createSequence0(String schema, String sequenceName, long start, Long max, StatementExecutor executor, boolean check) throws SQLException {
 		DatabaseDialect profile = this.getProfile();
 		sequenceName = profile.getObjectNameToUse(sequenceName);
@@ -2645,4 +2813,5 @@ public class DbMetaData {
 	// return false;
 	// }
 	// }
+
 }

@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -490,48 +489,76 @@ public abstract class Session {
 	@SuppressWarnings("unchecked")
 	public <T> T merge(T entity) throws SQLException {
 		if (entity instanceof IQueryableEntity) {
-			return (T) merge0((IQueryableEntity) entity);
+			return (T) merge0((IQueryableEntity) entity, null);
 		} else {
 			ITableMetadata meta = MetaHolder.getMeta(entity.getClass());
 			PojoWrapper wrapper = meta.transfer(entity, false);
-			wrapper = merge0(wrapper);
-			return (T) wrapper.get();
+			wrapper = merge0(wrapper, null);
+			return wrapper == null ? null : (T) wrapper.get();
+		}
+	}
+
+	/**
+	 * 合并记录——记录如果已经存在，则比较并更新；如果不存在则新增。（无级联操作）
+	 * 
+	 * @param entity
+	 *            要合并的记录数据
+	 * @param keys
+	 *            业务主键字段名
+	 * @return 如果插入返回对象本身，如果是更新则返回旧记录的值(如果插入，返回null;如果没修改，返回原对象;如果修改，返回旧对象。)
+	 * @throws SQLException
+	 *             如果数据库操作错误，抛出。
+	 */
+	@SuppressWarnings("unchecked")
+	public <T> T merge(T entity, String[] keys) throws SQLException {
+		if (keys != null && keys.length == 0) {
+			keys = null;
+		}
+		if (entity instanceof IQueryableEntity) {
+			return (T) merge0((IQueryableEntity) entity, keys);
+		} else {
+			ITableMetadata meta = MetaHolder.getMeta(entity.getClass());
+			PojoWrapper wrapper = meta.transfer(entity, false);
+			wrapper = merge0(wrapper, keys);
+			return wrapper == null ? null : (T) wrapper.get();
 		}
 	}
 
 	/**
 	 * @param entity
-	 * @return
+	 * @return the old value.
 	 * @throws SQLException
 	 */
-	private final <T extends IQueryableEntity> T merge0(T entity) throws SQLException {
-		T old = null;
+	private final <T extends IQueryableEntity> T merge0(T entity, String[] keys) throws SQLException {
 		@SuppressWarnings("unchecked")
 		Query<T> q = entity.getQuery();
 		q.setCascade(false);
 		ITableMetadata meta = q.getMeta();
-		if (meta.getPKFields().isEmpty()) {
-			q.setMaxResult(2);
-			List<T> list = select(q);
-			if (list.size() == 1) {
-				old = list.get(0);
-				DbUtils.compareToUpdateMap(entity, old);
-				if (old.needUpdate())
-					update(old);
+		if (keys == null && meta.getPKFields().isEmpty()) {
+			throw new UnsupportedOperationException("The tables has no primark key, must assign compare keys.");
+		}
+
+		T old = null;
+		if (keys == null) {
+			if (DbUtils.getPrimaryKeyValue(entity) != null) {
+				old = load(entity, true);
 				entity.clearQuery();
-				return old;
 			}
-		} else if (DbUtils.getPrimaryKeyValue(entity) != null) {
-			old = load(entity, true);
+		} else {
+			for (String s : keys) {
+				ColumnMapping cdef = meta.getColumnDef(meta.getField(s));
+				q.addCondition(cdef.field(), cdef.getFieldAccessor().get(entity));
+			}
+			old = load(entity, false);
 			entity.clearQuery();
-			if (old != null) {
-				DbUtils.compareToUpdateMap(entity, old);
-				if (old.needUpdate()) {
-					update(old);
-					return old;
-				} else {
-					return entity;
-				}
+		}
+		if (old != null) {
+			DbUtils.compareToUpdateMap(entity, old);
+			if (old.needUpdate()) {
+				update(old);
+				return old;
+			} else {
+				return entity;
 			}
 		}
 		// 如果旧数据不存在
@@ -940,19 +967,6 @@ public abstract class Session {
 		}
 	}
 
-	// /**
-	// *
-	// * @param queryObj
-	// * @param range
-	// * @return
-	// * @throws SQLException
-	// */
-	// @Deprecated
-	// public <T> List<T> select(ConditionQuery queryObj, IntRange range) throws
-	// SQLException {
-	// return select(queryObj, PageLimit.parse(range));
-	// }
-
 	/**
 	 * 根据拼装好的Query进行查询。并将结果转换为期望的对象。
 	 * 
@@ -970,14 +984,12 @@ public abstract class Session {
 	 * @throws SQLException
 	 *             如果数据库操作错误，抛出。
 	 * 
-	 * @see {@link #select(ConditionQuery, IntRange)}
-	 * 
-	 *      after calling
+	 * @see {@link #select(ConditionQuery, PageLimit)} As same as after calling
 	 *      {@code queryObj.getResultTransformer().setResultType(resultClass)}
-	 *      then use {@link #select(ConditionQuery, IntRange)} instead.
+	 *      then use {@link #select(ConditionQuery, PageLimit)} instead.
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> List<T> selectAs(ConditionQuery queryObj, Class<T> resultClz, IntRange range) throws SQLException {
+	public <T> List<T> selectAs(ConditionQuery queryObj, Class<T> resultClz, PageLimit range) throws SQLException {
 		queryObj.getResultTransformer().setResultType(resultClz);
 		QueryOption option;
 		if (queryObj instanceof JoinElement) {
@@ -985,8 +997,7 @@ public abstract class Session {
 		} else {
 			option = QueryOption.DEFAULT;
 		}
-
-		return this.innerSelect(queryObj, PageLimit.parse(range), null, option);
+		return this.innerSelect(queryObj, range, null, option);
 	}
 
 	/**
@@ -1003,7 +1014,7 @@ public abstract class Session {
 	 *      {@link Transformer#setResultType(Class)}
 	 */
 	public <T> List<T> selectAs(ConditionQuery obj, Class<T> resultType) throws SQLException {
-		return selectAs(obj, resultType, null);
+		return selectAs(obj, resultType, (PageLimit) null);
 	}
 
 	/**
@@ -1065,42 +1076,16 @@ public abstract class Session {
 
 	/**
 	 * 流式接口，一般用于超大结果集的返回
-	 * @param queryObj 
+	 * 
+	 * @param queryObj
 	 * @param offset
 	 * @param limit
 	 * @return
 	 * @throws SQLException
-	 * 必需特别注意，返回的元素必需要完成遍历，否则结果集就不会被关闭，会产生泄漏！
+	 *             必需特别注意，返回的元素必需要完成遍历，否则结果集就不会被关闭，会产生泄漏！
 	 */
 	public <T extends IQueryableEntity> Stream<T> iteratedSelect(TypedQuery<T> queryObj, long offset, int limit) throws SQLException {
-		return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iteratedSelect(queryObj, new PageLimit(offset, limit)), 0), false);
-	}
-
-	/**
-	 * 遍历器模式查找，一般用于超大结果集的返回。
-	 * {@linkplain #iteratedSelect(ConditionQuery, IntRange) 什么是结果遍历器}
-	 * 注意ResultIterator对象需要释放。如果不释放，相当于数据库上打开了一个不关闭的游标，而数据库的游标数是很有限的，
-	 * 耗尽后将不能执行任何数据库操作。
-	 * 
-	 * @param queryObj
-	 *            查询条件，可以是一个普通Query,或者UnionQuery,或者Join.
-	 * @param resultClz
-	 *            返回结果类型
-	 * @param range
-	 *            限制结果返回的条数，即分页信息。（传入null表示不限制）
-	 * @param strategies
-	 *            结果拼装参数
-	 * @return 遍历器，可以用于遍历查询结果。
-	 * @throws SQLException
-	 *             如果数据库操作错误，抛出。
-	 * @since 1.1
-	 * @see ResultIterator
-	 * @deprecated use {@link #iteratedSelect(ConditionQuery, IntRange)}
-	 *             instead.
-	 */
-	public <T> ResultIterator<T> iteratedSelect(ConditionQuery queryObj, Class<T> resultClz, IntRange range) throws SQLException {
-		queryObj.getResultTransformer().setResultType(resultClz);
-		return iteratedSelect(queryObj, range);
+		return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iteratedSelect(queryObj, limit == 0 ? null : new PageLimit(offset, limit)), 0), false);
 	}
 
 	/**
@@ -1134,7 +1119,7 @@ public abstract class Session {
 	 * 
 	 * @param queryObj
 	 *            查询条件，可以是一个普通Query,或者UnionQuery,或者Join.
-	 * @param range
+	 * @param pageinfo
 	 *            限制结果返回的条数，即分页信息。（传入null表示不限制）
 	 * @param strategies
 	 *            结果拼装参数
@@ -1144,30 +1129,30 @@ public abstract class Session {
 	 * @since 1.2
 	 * @see ResultIterator
 	 */
-	public <T> ResultIterator<T> iteratedSelect(ConditionQuery queryObj, IntRange range) throws SQLException {
+	public <T> ResultIterator<T> iteratedSelect(ConditionQuery queryObj, PageLimit pageinfo) throws SQLException {
 		QueryOption option;
 		if (queryObj instanceof JoinElement) {
 			option = QueryOption.createFrom((JoinElement) queryObj);
 		} else {
 			option = QueryOption.DEFAULT;
 		}
-		return innerIteratedSelect(queryObj, PageLimit.parse(range), option);
+		return innerIteratedSelect(queryObj, pageinfo, option);
 	}
 
 	/**
 	 * 使用指定的查询对象查询，返回结果遍历器。
-	 * {@linkplain #iteratedSelect(ConditionQuery, IntRange) 什么是结果遍历器}
+	 * {@linkplain #iteratedSelect(ConditionQuery, PageLimit) 什么是结果遍历器}
 	 * 
 	 * @param obj
 	 *            查询请求
-	 * @param range
+	 * @param pageinfo
 	 *            查询对象范围
 	 * @return 结果遍历器(ResultIterator)
 	 * @throws SQLException
 	 *             如果数据库操作错误，抛出。
 	 * @see {@link ResultIterator}
 	 */
-	public <T extends IQueryableEntity> ResultIterator<T> iteratedSelect(T obj, IntRange range) throws SQLException {
+	public <T extends IQueryableEntity> ResultIterator<T> iteratedSelect(T obj, PageLimit pageinfo) throws SQLException {
 		@SuppressWarnings("unchecked")
 		Query<T> query = obj.getQuery();
 		QueryOption option = QueryOption.createFrom(query);
@@ -1175,11 +1160,11 @@ public abstract class Session {
 		// 预处理
 		Transformer t = query.getResultTransformer();
 		if (!t.isLoadVsOne() || query.getMeta().getRefFieldsByName().isEmpty()) {
-			return innerIteratedSelect(query, PageLimit.parse(range), option);
+			return innerIteratedSelect(query, pageinfo, option);
 		}
 		// 拼装出带连接的查询请求
 		JoinElement q = DbUtils.toReferenceJoinQuery(query, null);
-		return innerIteratedSelect(q, PageLimit.parse(range), option);
+		return innerIteratedSelect(q, pageinfo, option);
 	}
 
 	/**
@@ -1247,7 +1232,7 @@ public abstract class Session {
 	 *             如果数据库操作错误，抛出。
 	 * @see RecordsHolder
 	 */
-	public <T extends IQueryableEntity> RecordsHolder<T> selectForUpdate(Query<T> query, IntRange range) throws SQLException {
+	public <T extends IQueryableEntity> RecordsHolder<T> selectForUpdate(Query<T> query, PageLimit range) throws SQLException {
 		Assert.notNull(query);
 		QueryOption option = QueryOption.createFrom(query);
 		option.holdResult = true;
@@ -1259,7 +1244,7 @@ public abstract class Session {
 			at.setAliasType(AllTableColumns.AliasMode.RAWNAME);
 		}
 		@SuppressWarnings("unchecked")
-		List<T> objs = innerSelect(query, PageLimit.parse(range), query.getFilterCondition(), option);
+		List<T> objs = innerSelect(query, range, query.getFilterCondition(), option);
 		RecordsHolder<T> result = new RecordsHolder<T>(query.getMeta());
 		ResultSetContainer rawrs = option.getRs();
 		try {
@@ -1898,19 +1883,22 @@ public abstract class Session {
 	/**
 	 * 
 	 * @param entity
-	 * @param start
+	 *            查询请求
+	 * @param offset
+	 *            跳过offset条
 	 * @param limit
+	 *            限制limit条
 	 * @return
 	 * @throws SQLException
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> Page<T> selectPage(T entity, int start, int limit) throws SQLException {
+	public <T> Page<T> selectPage(T entity, int offset, int limit) throws SQLException {
 		if (entity instanceof IQueryableEntity) {
-			return (Page<T>) pageSelect((IQueryableEntity) entity, limit).setOffset(start).getPageData();
+			return (Page<T>) pageSelect((IQueryableEntity) entity, limit).setOffset(offset).getPageData();
 		} else {
 			ITableMetadata meta = MetaHolder.getMeta(entity.getClass());
 			PojoWrapper vw = meta.transfer(entity, true);
-			Page<PojoWrapper> page = pageSelect(vw, limit).setOffset(start).getPageData();
+			Page<PojoWrapper> page = pageSelect(vw, limit).setOffset(offset).getPageData();
 			return PojoWrapper.unwrapPage(page);
 		}
 
@@ -2109,7 +2097,7 @@ public abstract class Session {
 	 * @see #createNativeQuery(String)
 	 * @see #createNativeQuery(String,Class)
 	 */
-	public final <T> List<T> selectBySql(String sql, Transformer transformer, IntRange range, Object... params) throws SQLException {
+	public final <T> List<T> selectBySql(String sql, Transformer transformer, PageLimit range, Object... params) throws SQLException {
 		return selectTarget(null).selectBySql(sql, transformer, range, params);
 	}
 
@@ -2176,7 +2164,7 @@ public abstract class Session {
 		if (debugMode) {
 			long dbAccess = System.currentTimeMillis() - parse; // 数据库查询时间
 			parse = parse - start; // 解析SQL时间
-			LogUtil.show(StringUtils.concat("Total Count:", String.valueOf(total), "\t Time cost([ParseSQL]:", String.valueOf(parse), "ms, [DbAccess]:",
+			LogUtil.info(StringUtils.concat("Total Count:", String.valueOf(total), "\t Time cost([ParseSQL]:", String.valueOf(parse), "ms, [DbAccess]:",
 					String.valueOf(dbAccess), "ms) |", getTransactionId(null)));
 		}
 		return total;
@@ -3281,6 +3269,8 @@ public abstract class Session {
 		return sql(null);
 	}
 
+	// ////////////////////以下全部都是废弃方法//////////////////////
+
 	/**
 	 * 废弃，使用 {@link #iteratedSelect(TypedQuery, PageLimit)} 代替
 	 * 
@@ -3303,4 +3293,41 @@ public abstract class Session {
 		return select(obj, PageLimit.parse(range));
 	}
 
+	/**
+	 * 根据拼装好的Query进行查询。并将结果转换为期望的对象。
+	 * 
+	 * @deprecated please using
+	 *             {@link #selectAs(ConditionQuery, Class, PageLimit)}
+	 * @throws SQLException
+	 */
+	public <T> List<T> selectAs(ConditionQuery queryObj, Class<T> resultClz, IntRange range) throws SQLException {
+		return selectAs(queryObj, resultClz, PageLimit.parse(range));
+	}
+
+	/**
+	 * 遍历器模式查找，一般用于超大结果集的返回。
+	 * {@linkplain #iteratedSelect(ConditionQuery, IntRange) 什么是结果遍历器}
+	 * 注意ResultIterator对象需要释放。如果不释放，相当于数据库上打开了一个不关闭的游标，而数据库的游标数是很有限的，
+	 * 耗尽后将不能执行任何数据库操作。
+	 * 
+	 * @param queryObj
+	 *            查询条件，可以是一个普通Query,或者UnionQuery,或者Join.
+	 * @param resultClz
+	 *            返回结果类型
+	 * @param range
+	 *            限制结果返回的条数，即分页信息。（传入null表示不限制）
+	 * @param strategies
+	 *            结果拼装参数
+	 * @return 遍历器，可以用于遍历查询结果。
+	 * @throws SQLException
+	 *             如果数据库操作错误，抛出。
+	 * @since 1.1
+	 * @see ResultIterator
+	 * @deprecated use {@link #iteratedSelect(ConditionQuery, IntRange)}
+	 *             instead.
+	 */
+	public <T> ResultIterator<T> iteratedSelect(ConditionQuery queryObj, Class<T> resultClz, IntRange range) throws SQLException {
+		queryObj.getResultTransformer().setResultType(resultClz);
+		return iteratedSelect(queryObj, PageLimit.parse(range));
+	}
 }

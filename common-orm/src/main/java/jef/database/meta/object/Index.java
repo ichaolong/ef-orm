@@ -351,7 +351,7 @@ select A.*             ,
 		}
 		
 	}
-
+	
 	public String toCreateSql(DatabaseDialect profile) {
 		StringBuilder sb = new StringBuilder("CREATE ");
 		if(this.unique){

@@ -1,9 +1,10 @@
 package jef.database.meta;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang.RandomStringUtils;
 
 import jef.common.PairIS;
 import jef.common.PairSS;
@@ -17,17 +18,16 @@ import jef.database.dialect.type.ColumnMapping;
 import jef.database.meta.def.UniqueConstraintDef;
 import jef.tools.StringUtils;
 
-import org.apache.commons.lang.RandomStringUtils;
-
 /**
  * 建表任务操作
  * 
  * @author jiyi
  * 
  */
-public class TableCreateStatement {
+public class TableCreateSQLs {
 	/**
-	 * 表定义
+	 * 表定义(由于分库分表机制的存在，所以生成建表任务是多张表，不是一张表)
+	 * 此处返回位于单个库上多个表的对应生成语句
 	 */
 	private final List<TableDef> tables = new ArrayList<TableDef>();
 
@@ -107,7 +107,15 @@ public class TableCreateStatement {
 	 */
 	private final List<PairIS> sequences = new ArrayList<PairIS>();
 
+	/**
+	 * 描述单张表的建表内容
+	 * @author qihongfei
+	 *
+	 */
 	static class TableDef {
+		/**
+		 * 表名（如果和关键字冲突，已经加上引号等符号）
+		 */
 		private String escapedTablename;
 		/**
 		 * MySQL专用。字符集编码
@@ -132,7 +140,7 @@ public class TableCreateStatement {
 		 */
 		private List<PairSS> ccmments = new ArrayList<PairSS>();
 		/**
-		 * 没有主键约束
+		 * 该表上没有主键约束
 		 */
 		private boolean NoPkConstraint;
 
@@ -192,9 +200,12 @@ public class TableCreateStatement {
 				}
 			}
 		}
-
 	}
 
+	/**
+	 * 返回当前库上所有的create table语句。
+	 * @return
+	 */
 	public List<String> getTableSQL() {
 		List<String> result = new ArrayList<String>(tables.size());
 		for (TableDef table : tables) {
@@ -203,9 +214,51 @@ public class TableCreateStatement {
 		return result;
 	}
 
-	public List<String> getOtherContraints() {
-		return Collections.emptyList();
-	}
+	/**
+	 * 返回当前库上所有的create index语句。
+	 * @return
+	 */
+	/*public List<String> getIndexes() { // 包含在建表语句里，不单独提供创建语句
+		List<String> result = new ArrayList<String>(tables.size());
+		for (TableDef table : tables) {
+			result.addAll(table.getIndexes());
+		}
+		return result;
+	}*/
+	
+	/**
+	 * 返回当前库上所有的create constraint语句。
+	 * @return
+	 */
+	/*public List<String> getOtherContraints() { // 包含在建表语句里，不单独提供创建语句
+		List<String> result = new ArrayList<String>(tables.size());
+		for (TableDef table : tables) {
+			
+			for(Constraint con : table.getConstraints()){
+				
+				StringBuilder sb = new StringBuilder();
+				sb.append(" ALTER TABLE ");
+				sb.append(table.escapedTablename);
+				sb.append(" ADD CONSTRAINT ");
+				sb.append(con.getName());
+				
+				// 主键约束
+				if(ConstraintType.P.getTypeName().equals(con.getType().getTypeName())){
+					sb.append(" PRIMARY KEY");
+					
+					// 唯一约束
+				}else if(ConstraintType.U.getTypeName().equals(con.getType().getTypeName())){
+					sb.append(" UNIQUE");
+				}
+				sb.append("(");
+				sb.append(StringUtils.join(con.getColumns(), ","));
+				sb.append(")");
+				result.add(sb.toString());
+			}
+		}
+		return result;
+	}*/
+	
 
 	public List<PairIS> getSequences() {
 		return sequences;
