@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.easyframe</groupId>
 	<artifactId>orm-tutorial</artifactId>
-	<version>1.12.0.RELEASE</version>
+	<version>1.12.0-SNAPSHOT</version>
 	<name>orm-tutorial</name>
 	<url>http://maven.apache.org</url>
 	<properties>
@@ -136,9 +136,8 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-					<compilerVersion>1.6</compilerVersion>
+					<source>8</source>
+					<target>8</target>
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
